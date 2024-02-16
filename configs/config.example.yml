@@ -1,0 +1,21 @@
+Debug: true
+systemName: "Collin Test System"
+
+webServer:
+  port: 3000
+  address: 0.0.0.0
+
+nodes:
+  - name: "Node 1"
+    nodeNumber: 1998
+    host: 127.0.0.1
+    port: 5038
+    user: admin
+    password: password
+
+  - name: "Node 2"
+    nodeNumber: 1999
+    host: 127.0.0.1
+    port: 5038
+    user: admin
+    password: password

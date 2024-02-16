@@ -4,12 +4,88 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= title %></title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
-<h1><%= title %></h1>
+<div class="container mt-4">
+    <h1 class="mb-4"><%= title %></h1>
+    <div class="custom-control custom-switch mb-3">
+        <input type="checkbox" class="custom-control-input" id="toggleKeyedState" checked>
+        <label class="custom-control-label" for="toggleKeyedState">Show Only Keyed States</label>
+    </div>
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th scope="col">Callsign</th>
+            <th scope="col">Node</th>
+            <th scope="col">Via</th>
+            <th scope="col">Location</th>
+            <th scope="col">Frequency</th>
+            <th scope="col">State</th>
+            <th scope="col">Actions</th>
+        </tr>
+        </thead>
+        <tbody id="events"></tbody>
+    </table>
+</div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script>
     const socket = io();
+    let lastStates = {};
+
+    socket.on('node_key', function(data) {
+        const showOnlyKeyed = document.getElementById('toggleKeyedState').checked;
+
+        if (showOnlyKeyed && data.state !== 'Keyed') {
+            return;
+        }
+
+        const tableBody = document.getElementById('events');
+
+        const row = tableBody.insertRow(0);
+        const cellCallsign = row.insertCell(0);
+        const cellNode = row.insertCell(1);
+        const cellVia = row.insertCell(2);
+        const cellLocation = row.insertCell(3);
+        const cellFrequency = row.insertCell(4);
+        const cellState = row.insertCell(5);
+        const cellActions = row.insertCell(6);
+
+        cellCallsign.textContent = data.callsign;
+        cellNode.textContent = data.node;
+        cellVia.textContent = data.via || 'N/A';
+        cellLocation.textContent = data.location;
+        cellFrequency.textContent = data.frequency || 'N/A';
+        cellState.innerHTML = `<span class="badge ${data.state === 'Keyed' ? 'badge-success' : 'badge-secondary'}">${data.state}</span>`;
+
+        cellActions.innerHTML = `
+            <button class="btn btn-danger btn-sm" onclick="blockNode('${data.node}')">Block</button>
+            <button class="btn btn-warning btn-sm" onclick="disconnectNode('${data.node}')">Disconnect</button>
+        `;
+
+        while (tableBody.rows.length > 15) {
+            tableBody.deleteRow(-1);
+        }
+    });
+
+    document.getElementById('toggleKeyedState').addEventListener('change', function() {
+        document.getElementById('events').innerHTML = '';
+    });
+
+    function blockNode(nodeId) {
+        console.log("Block node:", nodeId);
+        // TODO
+    }
+
+    function disconnectNode(nodeId) {
+        console.log("Disconnect node:", nodeId);
+        // TODO
+    }
 </script>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>

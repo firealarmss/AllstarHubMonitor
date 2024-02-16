@@ -13,6 +13,7 @@ const yaml = require('js-yaml');
 const Logger = require('./modules/Logger');
 const DbManager = require("./modules/DbManager");
 const AmiCommunications = require("./modules/AmiCommunications")
+const WebInterface = require('./modules/WebInterface');
 
 const argv = yargs
 
@@ -40,17 +41,17 @@ if (argv.config) {
 
     let LogPath = config.LogPath || "Disabled";
 
-    console.log(`AllstarLink Hub Monitor\n\nDebug: ${config.Debug}\nLog Path: ${LogPath}\n`);
+    console.log(`AllstarLink Hub Monitor\nCopyright 2024 Caleb, KO4UYJ\n\nDebug: ${config.Debug}\nLog Path: ${LogPath}\n`);
+
+    const { app, server, io } = WebInterface(config);
+
     config.nodes.forEach((node) => {
         let logger = new Logger();
-        let amiComms = new AmiCommunications(null, node);
+        let amiComms = new AmiCommunications(logger, node, io);
         amiComms.initialize();
-
-        setTimeout(() => {
-            //amiComms.sendAsteriskCLICommand("help").then(r => {}).catch(e => {});
-            //amiComms.sendCommand("ListCommands", null).then(r => {}).catch(e => {});
-        }, 2000)
     });
+
+    server.listen(config.webServer.port, () => console.log(`Server running on port ${config.webServer.port}`));
 
 /*      let logger = new Logger(config.Debug, server.name, config.LogPath, 0);
         let dbManager = new DbManager("./db/users.db", logger);

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .node-container {
+            margin-bottom: 20px;
+        }
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+<div class="container mt-4">
+    <h1 class="mb-4"><%= title %></h1>
+    <% nodes.forEach(function(node) { %>
+        <div class="node-container">
+            <div class="card">
+                <div class="card-header">
+                    Node <%= node.node %>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                        <tr>
+                            <th>Callsign</th>
+                            <th>Location</th>
+                            <th>Frequency</th>
+                            <th>State</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody id="node<%= node.node %>-body">
+                        </tbody>
+                    </table>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary connect-node" data-toggle="modal" data-target="#connectNodeModal" data-node="<%= node.node %>" data-via="<%= node.via %>">Connect</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <% }); %>
+</div>
+
+<div class="modal fade" id="connectNodeModal" tabindex="-1" role="dialog" aria-labelledby="connectNodeModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="connectNodeModalLabel">Connect to Node</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="connectNodeForm">
+                <div class="modal-body">
+                    <input type="hidden" name="sourceNode" id="sourceNode" value="f">
+                    <div class="form-group">
+                        <label for="targetNode">Target Node Number</label>
+                        <input type="text" class="form-control" id="targetNode" name="targetNode" placeholder="Node Number">
+                    </div>
+                    <div class="form-group">
+                        <label for="connectionType">Connection Type</label>
+                        <select class="form-control" id="connectionType" name="connectionType">
+                            <option value="permanent">Permanent</option>
+                            <option value="default">Default</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success">Connect</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const socket = io();
+
+        socket.on('connected_nodes', function(nodes) {
+            document.querySelectorAll('[id^="node"]').forEach(tableBody => {
+                tableBody.innerHTML = '';
+            });
+
+            if (nodes.length === 0) {
+                document.querySelectorAll('[id^="node"]').forEach(tableBody => {
+                    const row = tableBody.insertRow();
+                    row.innerHTML = '<td colspan="5">No connected nodes</td>';
+                });
+            } else {
+                nodes.forEach(node => {
+                    const tableBody = document.querySelector(`#node${node.via}-body`);
+                    if (!tableBody) {
+                        console.error(`Table body not found for node ${node.via}`);
+                        return;
+                    }
+                    addOrUpdateRow(tableBody, node);
+                });
+            }
+        });
+
+        function addOrUpdateRow(tableBody, node) {
+            let row = tableBody.querySelector(`#row${node.node}`);
+            if (!row) {
+                row = tableBody.insertRow();
+                row.id = `row${node.node}`;
+            }
+            row.innerHTML = `
+            <td>${node.callsign || 'N/A'}</td>
+            <td>${node.location || 'N/A'}</td>
+            <td>${node.frequency || 'N/A'}</td>
+            <td><span class="badge ${node.state === 'Keyed' ? 'badge-success' : 'badge-secondary'}">${node.state}</span></td>
+            <td><button class="btn btn-warning btn-sm" onclick="disconnectNode('${node.node}', '${node.via}')">Disconnect</button></td>
+        `;
+        }
+
+        window.disconnectNode = function(nodeId, via) {
+            console.log(`Requesting disconnect for node ${nodeId} from ${via}`);
+            socket.emit('disconnect_node', { nodeId, via });
+            socket.emit('disconnect_node', {
+                sourceNode: via,
+                targetNode: nodeId,
+            });
+            //document.querySelector(`#row${nodeId}`).remove();
+        };
+        document.querySelectorAll('.kick-node').forEach(button => {
+            button.addEventListener('click', function() {
+                const node = this.getAttribute('data-node');
+                console.log(`Kick/Block node ${node}`);
+            });
+        });
+
+        document.querySelectorAll('.connect-node').forEach(button => {
+            button.addEventListener('click', function() {
+                const sourceNode = this.getAttribute('data-via');
+
+                const finalSourceNode = sourceNode ? sourceNode : this.getAttribute('data-node');
+
+                document.getElementById('sourceNode').value = finalSourceNode;
+                $('#connectNodeModal').modal('show');
+            });
+        });
+
+        document.getElementById('connectNodeForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+            const sourceNode = formData.get('sourceNode');
+            const targetNode = formData.get('targetNode');
+            const connectionType = formData.get('connectionType');
+
+            console.log(`Requesting to connect node ${sourceNode} to ${targetNode} as ${connectionType}`);
+
+            socket.emit('connect_node', {
+                sourceNode: sourceNode,
+                targetNode: targetNode,
+                connectionType: connectionType
+            });
+
+            $('#connectNodeModal').modal('hide');
+        });
+    });
+</script>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
