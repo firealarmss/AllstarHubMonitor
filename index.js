@@ -11,7 +11,7 @@ const yargs = require('yargs');
 const fs = require('fs');
 const yaml = require('js-yaml');
 const Logger = require('./modules/Logger');
-const DbManager = require("./modules/DbManager");
+//const DbManager = require("./modules/DbManager");
 const AmiCommunications = require("./modules/AmiCommunications")
 const WebInterface = require('./modules/WebInterface');
 
