@@ -12,7 +12,7 @@ class AmiCommunications {
     }
 
     initialize() {
-        this.amiClient.connect('admin', 'aGR2GF5VfQu7Nvh', {host: this.node.host, port: this.node.port})
+        this.amiClient.connect(this.node.user, this.node.password, {host: this.node.host, port: this.node.port})
             .then(() => {
                 this.setupEventListeners();
             })
