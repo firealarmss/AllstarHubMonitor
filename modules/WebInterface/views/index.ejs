@@ -4,9 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= title %></title>
+    <style>
+        .alert-fixed {
+            width: 100%;
+            z-index: 1050;
+            display: none;
+        }
+        .container.mt-4 {
+            transition: margin-top 0.3s;
+        }
+    </style>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
+
+<div id="connectionStatus" class="alert alert-danger alert-fixed">
+    Connection lost to server...
+</div>
+
 <div class="container mt-4">
     <h1 class="mb-4"><%= title %></h1>
     <table class="table table-striped">
@@ -27,7 +42,22 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
     const socket = io();
+    const connectionStatusDiv = document.getElementById('connectionStatus');
+    const mainContainer = document.querySelector('.container.mt-4');
+
     let lastKeyedTime = {};
+
+    socket.on('connect', function () {
+        console.log('Socket connected.');
+        connectionStatusDiv.style.display = 'none';
+        mainContainer.style.marginTop = '1.5rem';
+    });
+
+    socket.on('disconnect', function () {
+        console.log('Socket disconnected.');
+        connectionStatusDiv.style.display = 'inline-block';
+        mainContainer.style.marginTop = '3rem';
+    });
 
     socket.on('node_key', function(data) {
         const configNodes = JSON.stringify(data.config.map(node => node.nodeNumber)).replace(/"/g, "'");
