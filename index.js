@@ -47,8 +47,10 @@ if (argv.config) {
 
     config.nodes.forEach((node) => {
         let logger = new Logger();
-        let amiComms = new AmiCommunications(logger, node, io);
-        amiComms.initialize();
+        let amiComms = new AmiCommunications(logger, node, config.nodes, io);
+        amiComms.initialize().catch(error => {
+            console.error('Error initializing AMI Communications:', error);
+        });
     });
 
     server.listen(config.webServer.port, () => console.log(`Server running on port ${config.webServer.port}`));

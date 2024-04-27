@@ -1,5 +1,4 @@
-Debug: true
-systemName: "Collin Test System"
+systemName: "My System"
 
 webServer:
   port: 3000
@@ -7,15 +6,15 @@ webServer:
 
 nodes:
   - name: "Node 1"
-    nodeNumber: 1998
+    nodeNumber: "1998"
     host: 127.0.0.1
     port: 5038
     user: admin
-    password: password
+    password: aGR2GF5VfQu7Nvh
 
   - name: "Node 2"
-    nodeNumber: 1999
+    nodeNumber: "1999"
     host: 127.0.0.1
     port: 5038
     user: admin
-    password: password
+    password: aGR2GF5VfQu7Nvh

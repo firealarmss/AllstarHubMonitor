@@ -9,10 +9,6 @@
 <body>
 <div class="container mt-4">
     <h1 class="mb-4"><%= title %></h1>
-    <div class="custom-control custom-switch mb-3">
-        <input type="checkbox" class="custom-control-input" id="toggleKeyedState" checked>
-        <label class="custom-control-label" for="toggleKeyedState">Show Only Keyed States</label>
-    </div>
     <table class="table table-striped">
         <thead>
         <tr>
@@ -21,7 +17,6 @@
             <th scope="col">Via</th>
             <th scope="col">Location</th>
             <th scope="col">Frequency</th>
-            <th scope="col">State</th>
             <th scope="col">Actions</th>
         </tr>
         </thead>
@@ -32,57 +27,92 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
     const socket = io();
-    let lastStates = {};
+    let lastKeyedTime = {};
 
     socket.on('node_key', function(data) {
-        const showOnlyKeyed = document.getElementById('toggleKeyedState').checked;
+        const configNodes = JSON.stringify(data.config.map(node => node.nodeNumber)).replace(/"/g, "'");
 
-        if (showOnlyKeyed && data.state !== 'Keyed') {
+        if (configNodes.includes(data.node.toString())) {
+            console.debug('Event for config node skipped:', data);
             return;
         }
 
-        const tableBody = document.getElementById('events');
+        if (data.via.toString() === data.node) {
+            console.debug('Ignoring self-loop event:', data);
+            return;
+        }
 
-        const row = tableBody.insertRow(0);
-        const cellCallsign = row.insertCell(0);
-        const cellNode = row.insertCell(1);
-        const cellVia = row.insertCell(2);
-        const cellLocation = row.insertCell(3);
-        const cellFrequency = row.insertCell(4);
-        const cellState = row.insertCell(5);
-        const cellActions = row.insertCell(6);
+        const eventIdentifier = `${data.node}-${data.state}`;
 
-        cellCallsign.textContent = data.callsign;
-        cellNode.textContent = data.node;
-        cellVia.textContent = data.via || 'N/A';
-        cellLocation.textContent = data.location;
-        cellFrequency.textContent = data.frequency || 'N/A';
-        cellState.innerHTML = `<span class="badge ${data.state === 'Keyed' ? 'badge-success' : 'badge-secondary'}">${data.state}</span>`;
+        const now = Date.now();
 
-        cellActions.innerHTML = `
-            <button class="btn btn-danger btn-sm" onclick="blockNode('${data.node}')">Block</button>
-            <button class="btn btn-warning btn-sm" onclick="disconnectNode('${data.node}')">Disconnect</button>
-        `;
+        if (data.state === 'Keyed' && (!lastKeyedTime[eventIdentifier] || now - lastKeyedTime[eventIdentifier] > 2000)) {
+            logEvent(data);
+            lastKeyedTime[eventIdentifier] = now;
+        }
 
-        while (tableBody.rows.length > 15) {
-            tableBody.deleteRow(-1);
+        if (data.state === 'Keyed' || data.state === 'Unkeyed') {
+            manageHighlight(data.node, data.state === 'Keyed');
         }
     });
 
-    document.getElementById('toggleKeyedState').addEventListener('change', function() {
-        document.getElementById('events').innerHTML = '';
+    socket.on('disconnect_ack', function({ nodeId }) {
+        const rows = document.querySelectorAll(`tr[data-node="${nodeId}"]`);
+        rows.forEach(row => {
+            row.classList.add('text-muted');
+            row.style.textDecoration = 'line-through';
+            const disconnectButton = row.querySelector('.disconnect-button');
+            if (disconnectButton) {
+                disconnectButton.textContent = 'Disconnected';
+                disconnectButton.disabled = true;
+            }
+        });
     });
+
+    function logEvent(data) {
+
+        const tableBody = document.getElementById('events');
+        const row = tableBody.insertRow(0);
+        row.setAttribute('data-node', data.node);
+        console.log(data);
+        row.innerHTML = `
+            <td>${data.callsign}</td>
+            <td>${data.node}</td>
+            <td>${data.via || 'N/A'}</td>
+            <td>${data.location}</td>
+            <td>${data.frequency || 'N/A'}</td>
+            <td>
+                <button class="btn btn-warning btn-sm disconnect-button" onclick="disconnectNode('${data.node}', '${data.via}')">Disconnect</button>
+            </td>
+        `;
+    }
+
+    function manageHighlight(nodeId, isKeyed) {
+        document.querySelectorAll(`tr[data-node="${nodeId}"]`).forEach(row => {
+            if (isKeyed) {
+                row.classList.add('table-success');
+            } else {
+                row.classList.remove('table-success');
+            }
+        });
+    }
+
+    function disconnectNode(nodeId, via, buttonElement) {
+        console.log("Disconnect node:", nodeId, "via:", via);
+        socket.emit('disconnect_node', { targetNode: nodeId, sourceNode: via });
+
+        if (buttonElement) {
+            buttonElement.disabled = true;
+            buttonElement.textContent = 'Disconnecting...';
+        }
+    }
 
     function blockNode(nodeId) {
         console.log("Block node:", nodeId);
-        // TODO
-    }
-
-    function disconnectNode(nodeId) {
-        console.log("Disconnect node:", nodeId);
-        // TODO
     }
 </script>
+
+
 
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>

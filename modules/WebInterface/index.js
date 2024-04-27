@@ -4,6 +4,9 @@ const socketIo = require('socket.io');
 const AmiCommunications = require("../AmiCommunications");
 
 function createApp(config, logger) {
+    this.config = config;
+    this.logger = logger;
+
     const app = express();
     const server = http.createServer(app);
     const io = socketIo(server);
@@ -21,12 +24,14 @@ function createApp(config, logger) {
     app.use('/nodes', require('./routes/nodes'));
 
     io.on('connection', (socket) => {
+        //TODO: Prob redundant
+
         config.nodes.forEach(nodeConfig => {
-            const amiComms = new AmiCommunications(logger, nodeConfig, io);
-            amiComms.initialize();
+            const amiComms = new AmiCommunications(logger, nodeConfig, config.nodes, io);
+            amiComms.initialize().then(r => {});
 
             setTimeout(() => {
-                amiComms.sendAsteriskCLICommand('rpt showvars 560380').then(r => {});
+                amiComms.sendAsteriskCLICommand(`rpt showvars ${nodeConfig.nodeNumber}`).then(r => {});
             }, 1000);
         });
 
@@ -60,10 +65,13 @@ function sendConnectionCommand(logger, io, config, node_info, command) {
         return;
     }
 
-    const amiComms = new AmiCommunications(logger, matchingNode, io);
+    const amiComms = new AmiCommunications(logger, matchingNode, this.config.nodes, io);
     amiComms.initialize();
     setTimeout(() => {
         amiComms.sendAsteriskCLICommand(`rpt fun ${node_info.sourceNode} ${command}${node_info.targetNode}`).then(r => {});
+        if (command === '*1') {
+            io.emit("disconnect_ack", {nodeId: node_info.targetNode, via: node_info.sourceNode});
+        }
     }, 2000);
 }
 

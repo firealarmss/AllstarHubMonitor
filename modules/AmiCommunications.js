@@ -2,24 +2,28 @@ const AmiClient = require('asterisk-ami-client');
 const parseAslDb = require('./AslDbHandler');
 
 class AmiCommunications {
-    constructor(logger, node, io) {
+    constructor(logger, node, nodes, io) {
         this.logger = logger;
+        this.configNodes = nodes;
         this.node = node;
 
         this.io = io;
         this.amiClient = new AmiClient();
         this.nodes = [];
+        this.connected = false;
     }
 
-    initialize() {
-        this.amiClient.connect('admin', 'aGR2GF5VfQu7Nvh', {host: this.node.host, port: this.node.port})
-            .then(() => {
-                this.setupEventListeners();
-            })
-            .catch(error => {
-                console.log('AMI Connection Error:', error);
-                this.logger.error('AMI Connection Error:', error);
-            });
+    async initialize() {
+        try {
+            await this.amiClient.connect(this.node.user, this.node.password, {host: this.node.host, port: this.node.port});
+            this.connected = true;
+            this.setupEventListeners();
+        } catch (error) {
+            console.log('AMI Connection Error:', error);
+            this.logger.error('AMI Connection Error:', error);
+            this.connected = false;
+            throw error;
+        }
     }
 
     setupEventListeners() {
@@ -78,8 +82,8 @@ class AmiCommunications {
                         state: state
                     };
                 }));
+                //console.log('Connected Nodes:', connectedNodes)
 
-                //console.log('Connected Nodes:', connectedNodes);
                 this.io.emit('connected_nodes', connectedNodes);
             } catch (error) {
                 console.error('Error processing RPT_ALINKS:', error);
@@ -103,7 +107,8 @@ class AmiCommunications {
                     let newState = stateIndicator === 'U' ? 'Unkeyed' : 'Keyed';
 
                     let nodeInfo = nodeData.find(n => n.nodeId === nodeId) || {};
-                    this.io.emit('node_key', { node: nodeId, via: this.node.nodeNumber, callsign: nodeInfo.callSign, frequency: nodeInfo.frequency, location: nodeInfo.location, direction: null, state: newState});
+                    //console.log("nodes list" + this.configNodes);
+                    this.io.emit('node_key', { node: nodeId, via: this.node.nodeNumber, callsign: nodeInfo.callSign || 'N/A', frequency: nodeInfo.frequency || 'N/A', location: nodeInfo.location || 'N/A', direction: null, state: newState, config: this.configNodes});
 
                     return {
                         node: nodeId,
@@ -117,20 +122,29 @@ class AmiCommunications {
                 });
 
                 let connectedNodes = await Promise.all(connectedNodesPromises);
-
+                //console.log('Connected Nodes:', connectedNodes)
                 this.io.emit('connected_nodes', connectedNodes);
             } catch (error) {
                 console.error('Error processing node list:', error);
             }
+        } else {
+            this.io.emit('connected_nodes', []);
         }
     }
 
-
     sendAsteriskCLICommand(cliCommand) {
+        if (!this.connected) {
+            return Promise.reject('Not connected to AMI');
+        }
+
         return this.sendCommand('Command', { Command: cliCommand });
     }
 
     sendCommand(command, parameters = {}) {
+        if (!this.connected) {
+            return Promise.reject('Not connected to AMI');
+        }
+
         return new Promise((resolve, reject) => {
             this.amiClient.action(Object.assign({ Action: command }, parameters), (err, res) => {
                 if (err) {

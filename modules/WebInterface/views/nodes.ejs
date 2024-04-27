@@ -8,30 +8,46 @@
         .node-container {
             margin-bottom: 20px;
         }
+
+        .alert-fixed {
+            width: 100%;
+            z-index: 1050;
+            display: none;
+        }
+        .container.mt-4 {
+            transition: margin-top 0.3s;
+        }
     </style>
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
+
+<div id="connectionStatus" class="alert alert-danger alert-fixed">
+    Connection lost to server...
+</div>
+
 <div class="container mt-4">
+
     <h1 class="mb-4"><%= title %></h1>
     <% nodes.forEach(function(node) { %>
         <div class="node-container">
             <div class="card">
                 <div class="card-header">
-                    Node <%= node.node %>
+                    Node <%= node.nodeNumber %>
                 </div>
                 <div class="card-body">
                     <table class="table">
                         <thead>
                         <tr>
                             <th>Callsign</th>
+                            <th>Node</th>
                             <th>Location</th>
                             <th>Frequency</th>
                             <th>State</th>
                             <th>Action</th>
                         </tr>
                         </thead>
-                        <tbody id="node<%= node.node %>-body">
+                        <tbody id="node<%= node.nodeNumber %>-body">
                         </tbody>
                     </table>
                     <div class="action-buttons">
@@ -80,52 +96,64 @@
     document.addEventListener('DOMContentLoaded', () => {
         const socket = io();
 
-        socket.on('connected_nodes', function(nodes) {
-            document.querySelectorAll('[id^="node"]').forEach(tableBody => {
-                tableBody.innerHTML = '';
-            });
+        const connectionStatusDiv = document.getElementById('connectionStatus');
+        const mainContainer = document.querySelector('.container.mt-4');
 
-            if (nodes.length === 0) {
-                document.querySelectorAll('[id^="node"]').forEach(tableBody => {
-                    const row = tableBody.insertRow();
-                    row.innerHTML = '<td colspan="5">No connected nodes</td>';
-                });
-            } else {
-                nodes.forEach(node => {
-                    const tableBody = document.querySelector(`#node${node.via}-body`);
-                    if (!tableBody) {
-                        console.error(`Table body not found for node ${node.via}`);
-                        return;
-                    }
-                    addOrUpdateRow(tableBody, node);
-                });
-            }
+        socket.on('connect', function () {
+            console.log('Socket connected.');
+            connectionStatusDiv.style.display = 'none';
+            mainContainer.style.marginTop = '1.5rem';
         });
 
-        function addOrUpdateRow(tableBody, node) {
-            let row = tableBody.querySelector(`#row${node.node}`);
-            if (!row) {
-                row = tableBody.insertRow();
-                row.id = `row${node.node}`;
-            }
-            row.innerHTML = `
-            <td>${node.callsign || 'N/A'}</td>
-            <td>${node.location || 'N/A'}</td>
-            <td>${node.frequency || 'N/A'}</td>
-            <td><span class="badge ${node.state === 'Keyed' ? 'badge-success' : 'badge-secondary'}">${node.state}</span></td>
-            <td><button class="btn btn-warning btn-sm" onclick="disconnectNode('${node.node}', '${node.via}')">Disconnect</button></td>
-        `;
-        }
+        socket.on('disconnect', function () {
+            console.log('Socket disconnected.');
+            connectionStatusDiv.style.display = 'inline-block';
+            mainContainer.style.marginTop = '3rem';
+        });
 
-        window.disconnectNode = function(nodeId, via) {
-            console.log(`Requesting disconnect for node ${nodeId} from ${via}`);
-            socket.emit('disconnect_node', { nodeId, via });
-            socket.emit('disconnect_node', {
-                sourceNode: via,
-                targetNode: nodeId,
+
+        socket.on('connected_nodes', function (nodes) {
+            nodes.forEach(node => {
+                const tableBody = document.querySelector(`#node${node.via}-body`);
+                if (!tableBody) {
+                    console.error(`Table body not found for node via ${node.via}`);
+                    return;
+                }
+
+                if (node.node === node.via.toString()) {
+                    console.debug(`Ignoring self connection ${node}`);
+                    return;
+                }
+
+                const rowId = `node-${node.node}-via-${node.via}`;
+                let row = document.getElementById(rowId);
+
+                if (!row) {
+                    row = tableBody.insertRow();
+                    row.id = rowId;
+                    row.innerHTML = `
+                    <td>${node.callsign || 'N/A'}</td>
+                    <td>${node.node}</td>
+                    <td>${node.location || 'N/A'}</td>
+                    <td>${node.frequency || 'N/A'}</td>
+                    <td><span class="badge badge-secondary" id="state-${node.node}">${node.state}</span></td>
+                    <td><button class="btn btn-warning btn-sm" onclick="disconnectNode('${node.node}', '${node.via}')">Disconnect</button></td>
+                `;
+                } else {
+                    const stateSpan = document.getElementById(`state-${node.node}`);
+                    if (stateSpan && stateSpan.textContent !== node.state) {
+                        stateSpan.textContent = node.state;
+                        stateSpan.className = `badge ${node.state === 'Keyed' ? 'badge-success' : 'badge-secondary'}`;
+                    }
+                }
             });
-            //document.querySelector(`#row${nodeId}`).remove();
+        });
+
+        window.disconnectNode = function (nodeId, via) {
+            console.log(`Requesting disconnect for node ${nodeId} from ${via}`);
+            socket.emit('disconnect_node', { sourceNode: via, targetNode: nodeId });
         };
+
         document.querySelectorAll('.kick-node').forEach(button => {
             button.addEventListener('click', function() {
                 const node = this.getAttribute('data-node');
@@ -136,9 +164,7 @@
         document.querySelectorAll('.connect-node').forEach(button => {
             button.addEventListener('click', function() {
                 const sourceNode = this.getAttribute('data-via');
-
                 const finalSourceNode = sourceNode ? sourceNode : this.getAttribute('data-node');
-
                 document.getElementById('sourceNode').value = finalSourceNode;
                 $('#connectNodeModal').modal('show');
             });
