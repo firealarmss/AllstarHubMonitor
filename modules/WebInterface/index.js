@@ -58,7 +58,8 @@ function createApp(config, logger) {
 }
 
 function sendConnectionCommand(logger, io, config, node_info, command) {
-    const matchingNode = config.nodes.find(node => node.nodeNumber === parseInt(node_info.sourceNode, 10) || node.node === parseInt(node_info.sourceNode, 10));
+    console.log(config.nodes);
+    const matchingNode = config.nodes.find(node => parseInt(node.nodeNumber) === parseInt(node_info.sourceNode, 10) || node.node === parseInt(node_info.sourceNode, 10));
 
     if (!matchingNode) {
         console.error('Node not found:', node_info.sourceNode);
@@ -66,7 +67,7 @@ function sendConnectionCommand(logger, io, config, node_info, command) {
     }
 
     const amiComms = new AmiCommunications(logger, matchingNode, this.config.nodes, io);
-    amiComms.initialize();
+    amiComms.initialize().then(r => {});
     setTimeout(() => {
         amiComms.sendAsteriskCLICommand(`rpt fun ${node_info.sourceNode} ${command}${node_info.targetNode}`).then(r => {});
         if (command === '*1') {
