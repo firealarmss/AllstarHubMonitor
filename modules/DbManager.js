@@ -9,10 +9,11 @@
 
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
+const Logger = require('./Logger'); // temporary
 
 class DbManager {
     constructor(dbFilePath, logger) {
-        this.logger = logger;
+        this.logger = new Logger(false, "", "", 1); // temporary
 
         this.db = new sqlite3.Database(dbFilePath, (err) => {
             if (err) {
@@ -52,12 +53,6 @@ class DbManager {
     editUser(userId, username, password, callback) {
         let sql = `UPDATE users SET username = ? WHERE id = ?`;
         let params = [username, userId];
-
-        /*        if (password) {
-                    const hash = bcrypt.hashSync(password, 8);
-                    sql = `UPDATE users SET username = ?, password = ? WHERE id = ?`;
-                    params = [username, hash, userId];
-                }*/
 
         this.db.run(sql, params, (err) => {
             callback(err);

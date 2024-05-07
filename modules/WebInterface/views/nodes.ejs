@@ -44,14 +44,18 @@
                             <th>Location</th>
                             <th>Frequency</th>
                             <th>State</th>
-                            <th>Action</th>
+                            <% if (isAuthenticated) {%>
+                                <th>Action</th>
+                            <% } %>
                         </tr>
                         </thead>
                         <tbody id="node<%= node.nodeNumber %>-body">
                         </tbody>
                     </table>
                     <div class="action-buttons">
-                        <button class="btn btn-primary connect-node" data-toggle="modal" data-target="#connectNodeModal" data-node="<%= node.node %>" data-via="<%= node.via %>">Connect</button>
+                        <% if (isAuthenticated) {%>
+                            <button class="btn btn-primary connect-node" data-toggle="modal" data-target="#connectNodeModal" data-node="<%= node.node %>" data-via="<%= node.via %>">Connect</button>
+                        <% } %>
                     </div>
                 </div>
             </div>
@@ -137,7 +141,9 @@
                     <td>${node.location || 'N/A'}</td>
                     <td>${node.frequency || 'N/A'}</td>
                     <td><span class="badge badge-secondary" id="state-${node.node}">${node.state}</span></td>
-                    <td><button class="btn btn-warning btn-sm" onclick="disconnectNode('${node.node}', '${node.via}')">Disconnect</button></td>
+                    <% if (isAuthenticated) {%>
+                        <td><button class="btn btn-warning btn-sm" onclick="disconnectNode('${node.node}', '${node.via}')">Disconnect</button></td>
+                    <% } %>
                 `;
                 } else {
                     const stateSpan = document.getElementById(`state-${node.node}`);
@@ -151,7 +157,8 @@
 
         window.disconnectNode = function (nodeId, via) {
             console.log(`Requesting disconnect for node ${nodeId} from ${via}`);
-            socket.emit('disconnect_node', { sourceNode: via, targetNode: nodeId });
+            console.log("<%=isAuthenticated.username%>");
+            socket.emit('disconnect_node', { sourceNode: via, targetNode: nodeId, username: "<%=isAuthenticated.username%>" });
         };
 
         document.querySelectorAll('.kick-node').forEach(button => {

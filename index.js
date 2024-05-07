@@ -14,6 +14,7 @@ const Logger = require('./modules/Logger');
 //const DbManager = require("./modules/DbManager");
 const AmiCommunications = require("./modules/AmiCommunications")
 const WebInterface = require('./modules/WebInterface');
+const DbManager = require("./modules/DbManager");
 
 const argv = yargs
 
@@ -43,7 +44,10 @@ if (argv.config) {
 
     console.log(`AllstarLink Hub Monitor\nCopyright 2024 Caleb, KO4UYJ\n\nDebug: ${config.Debug}\nLog Path: ${LogPath}\n`);
 
-    const { app, server, io } = WebInterface(config);
+    let dbManager = new DbManager("./db/users.db", null);
+    dbManager.initialize();
+
+    const { app, server, io } = WebInterface(config, null, dbManager);
 
     config.nodes.forEach((node) => {
         let logger = new Logger();
@@ -55,9 +59,8 @@ if (argv.config) {
 
     server.listen(config.webServer.port, () => console.log(`Server running on port ${config.webServer.port}`));
 
-/*      let logger = new Logger(config.Debug, server.name, config.LogPath, 0);
-        let dbManager = new DbManager("./db/users.db", logger);
-*/
+      let logger = new Logger(config.Debug, server.name, config.LogPath, 0);
+
 } else {
     console.error('No config file specified');
     process.exit(1);

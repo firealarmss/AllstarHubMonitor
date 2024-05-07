@@ -32,7 +32,9 @@
             <th scope="col">Via</th>
             <th scope="col">Location</th>
             <th scope="col">Frequency</th>
-            <th scope="col">Actions</th>
+            <% if (isAuthenticated) {%>
+                <th scope="col">Actions</th>
+            <% } %>
         </tr>
         </thead>
         <tbody id="events"></tbody>
@@ -111,9 +113,11 @@
             <td>${data.via || 'N/A'}</td>
             <td>${data.location}</td>
             <td>${data.frequency || 'N/A'}</td>
-            <td>
-                <button class="btn btn-warning btn-sm disconnect-button" onclick="disconnectNode('${data.node}', '${data.via}')">Disconnect</button>
-            </td>
+            <% if (isAuthenticated) {%>
+                <td>
+                    <button class="btn btn-warning btn-sm disconnect-button" onclick="disconnectNode('${data.node}', '${data.via}')">Disconnect</button>
+                </td>
+            <% } %>
         `;
     }
 
@@ -129,7 +133,9 @@
 
     function disconnectNode(nodeId, via, buttonElement) {
         console.log("Disconnect node:", nodeId, "via:", via);
-        socket.emit('disconnect_node', { targetNode: nodeId, sourceNode: via });
+        console.log("<%=isAuthenticated.username%>");
+
+        socket.emit('disconnect_node', { targetNode: nodeId, sourceNode: via, username: "<%=isAuthenticated.username%>" });
 
         if (buttonElement) {
             buttonElement.disabled = true;
@@ -141,8 +147,6 @@
         console.log("Block node:", nodeId);
     }
 </script>
-
-
 
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
