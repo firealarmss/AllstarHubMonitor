@@ -132,10 +132,18 @@
     }
 
     function disconnectNode(nodeId, via, buttonElement) {
-        console.log("Disconnect node:", nodeId, "via:", via);
-        console.log("<%=isAuthenticated.username%>");
+        if (!isAuthenticated || !isAuthenticated.username) {
+            alert('You must be logged in to perform this action.');
+            return;
+        }
 
-        socket.emit('disconnect_node', { targetNode: nodeId, sourceNode: via, username: "<%=isAuthenticated.username%>" });
+        console.log("Disconnect node:", nodeId, "via:", via);
+
+        socket.emit('disconnect_node', {
+            targetNode: nodeId,
+            sourceNode: via,
+            username: isAuthenticated.username
+        });
 
         if (buttonElement) {
             buttonElement.disabled = true;

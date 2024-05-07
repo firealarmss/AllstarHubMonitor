@@ -157,8 +157,12 @@
 
         window.disconnectNode = function (nodeId, via) {
             console.log(`Requesting disconnect for node ${nodeId} from ${via}`);
-            console.log("<%=isAuthenticated.username%>");
-            socket.emit('disconnect_node', { sourceNode: via, targetNode: nodeId, username: "<%=isAuthenticated.username%>" });
+
+            socket.emit('disconnect_node', {
+                targetNode: nodeId,
+                sourceNode: via,
+                username: isAuthenticated.username
+            });
         };
 
         document.querySelectorAll('.kick-node').forEach(button => {
