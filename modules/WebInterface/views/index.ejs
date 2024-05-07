@@ -44,6 +44,8 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
     const socket = io();
+    const isAuthenticated = "<%= isAuthenticated %>"
+
     const connectionStatusDiv = document.getElementById('connectionStatus');
     const mainContainer = document.querySelector('.container.mt-4');
 

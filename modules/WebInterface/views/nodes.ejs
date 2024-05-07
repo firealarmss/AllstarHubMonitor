@@ -99,6 +99,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const socket = io();
+        const isAuthenticated = "<%= isAuthenticated %>"
 
         const connectionStatusDiv = document.getElementById('connectionStatus');
         const mainContainer = document.querySelector('.container.mt-4');
