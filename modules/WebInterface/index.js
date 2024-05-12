@@ -28,6 +28,10 @@ function createApp(config, logger, dbManager) {
         amiComms.initialize().catch(err => {
             console.error("AMI Initialization failed for node", nodeConfig.nodeNumber, ":", err);
         });
+
+        setTimeout(() => {
+            amiComms.sendAsteriskCLICommand(`rpt showvars ${nodeConfig.nodeNumber}`).then(r => {});
+        }, 1000);
     });
 
     app.set('view engine', 'ejs');
