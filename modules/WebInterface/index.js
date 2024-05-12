@@ -24,7 +24,8 @@ function createApp(config, logger, dbManager) {
 
     config.nodes.forEach(nodeConfig => {
         const amiComms = new AmiCommunications(logger, nodeConfig, config.nodes, io);
-        amiCommsInstances.push(amiComms);  // Store the instance
+        amiComms.nodeConfig = nodeConfig;
+        amiCommsInstances.push(amiComms);
         amiComms.initialize().catch(err => {
             console.error("AMI Initialization failed for node", nodeConfig.nodeNumber, ":", err);
         });
@@ -76,13 +77,14 @@ function createApp(config, logger, dbManager) {
         if (allConnected) {
             amiCommsInstances.forEach(comm => {
                 comm.emitLastKeyUpEvents(socket);
-                comm.sendAsteriskCLICommand(`rpt showvars ${nodeConfig.nodeNumber}`).then(r => {});
+                comm.sendAsteriskCLICommand(`rpt showvars ${comm.nodeConfig.nodeNumber}`).then(r => {});
             });
         } else {
             console.log("Not all AMI instances are connected. Retrying in 5 seconds...");
             setTimeout(() => checkAndEmitEvents(socket), 5000);
         }
     }
+
 
     return { app, server, io };
 }
