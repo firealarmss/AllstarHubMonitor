@@ -65,30 +65,14 @@
     });
 
     socket.on('node_key', function(data) {
-        const configNodes = JSON.stringify(data.config.map(node => node.nodeNumber)).replace(/"/g, "'");
+        processEvent(data);
+    });
 
-        if (configNodes.includes(data.node.toString())) {
-            console.debug('Event for config node skipped:', data);
-            return;
-        }
-
-        if (data.via.toString() === data.node) {
-            console.debug('Ignoring self-loop event:', data);
-            return;
-        }
-
-        const eventIdentifier = `${data.node}-${data.state}`;
-
-        const now = Date.now();
-
-        if (data.state === 'Keyed' && (!lastKeyedTime[eventIdentifier] || now - lastKeyedTime[eventIdentifier] > 2000)) {
-            logEvent(data);
-            lastKeyedTime[eventIdentifier] = now;
-        }
-
-        if (data.state === 'Keyed' || data.state === 'Unkeyed') {
-            manageHighlight(data.node, data.state === 'Keyed');
-        }
+    socket.on('initial_key_up_events', function(events) {
+        console.log('Initial key up events:', events);
+        events.forEach(event => {
+            processEvent(event, true);
+        });
     });
 
     socket.on('disconnect_ack', function({ nodeId }) {
@@ -104,8 +88,31 @@
         });
     });
 
-    function logEvent(data) {
+    function processEvent(data, initial = false) {
+        const configNodes = JSON.stringify(data.config.map(node => node.nodeNumber)).replace(/"/g, "'");
 
+        const eventIdentifier = `${data.node}-${data.state}`;
+
+        const now = Date.now();
+
+        if (configNodes.includes(data.node.toString()) || data.via.toString() === data.node) {
+            //console.debug('Event skipped:', data);
+            return;
+        }
+
+        if (data.state === 'Keyed' && (!lastKeyedTime[eventIdentifier] || now - lastKeyedTime[eventIdentifier] > 2000) && !initial) {
+            logEvent(data);
+            lastKeyedTime[eventIdentifier] = now;
+        } else if (initial) {
+            logEvent(data)
+        }
+
+        if ((data.state === 'Keyed' || data.state === 'Unkeyed') && !initial) {
+            manageHighlight(data.node, data.state === 'Keyed');
+        }
+    }
+
+    function logEvent(data) {
         const tableBody = document.getElementById('events');
         const row = tableBody.insertRow(0);
         row.setAttribute('data-node', data.node);
@@ -116,7 +123,7 @@
             <td>${data.via || 'N/A'}</td>
             <td>${data.location}</td>
             <td>${data.frequency || 'N/A'}</td>
-            <% if (isAuthenticated) {%>
+            <% if (isAuthenticated) { %>
                 <td>
                     <button class="btn btn-warning btn-sm disconnect-button" onclick="disconnectNode('${data.node}', '${data.via}')">Disconnect</button>
                 </td>

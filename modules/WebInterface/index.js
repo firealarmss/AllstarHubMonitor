@@ -20,6 +20,16 @@ function createApp(config, logger, dbManager) {
     const server = http.createServer(app);
     const io = socketIo(server);
 
+    const amiCommsInstances = [];
+
+    config.nodes.forEach(nodeConfig => {
+        const amiComms = new AmiCommunications(logger, nodeConfig, config.nodes, io);
+        amiCommsInstances.push(amiComms);  // Store the instance
+        amiComms.initialize().catch(err => {
+            console.error("AMI Initialization failed for node", nodeConfig.nodeNumber, ":", err);
+        });
+    });
+
     app.set('view engine', 'ejs');
     app.set('views', __dirname + '/views');
 
@@ -40,16 +50,7 @@ function createApp(config, logger, dbManager) {
     app.use(userManagementRouter);
 
     io.on('connection', (socket) => {
-        //TODO: Prob redundant
-
-        config.nodes.forEach(nodeConfig => {
-            const amiComms = new AmiCommunications(logger, nodeConfig, config.nodes, io);
-            amiComms.initialize().then(r => {});
-
-            setTimeout(() => {
-                amiComms.sendAsteriskCLICommand(`rpt showvars ${nodeConfig.nodeNumber}`).then(r => {});
-            }, 1000);
-        });
+        checkAndEmitEvents(socket);
 
         socket.on('connect_node', (node_info) => {
             if (node_info.connectionType === 'permanent') {
@@ -69,6 +70,17 @@ function createApp(config, logger, dbManager) {
             //console.log('User disconnected');
         });
     });
+
+    function checkAndEmitEvents(socket) {
+        const allConnected = amiCommsInstances.every(comm => comm.connected);
+        if (allConnected) {
+            amiCommsInstances.forEach(comm => comm.emitLastKeyUpEvents(socket));
+        } else {
+            console.log("Not all AMI instances are connected. Retrying in 5 seconds...");
+            setTimeout(() => checkAndEmitEvents(socket), 5000);
+        }
+    }
+
 
     return { app, server, io };
 }

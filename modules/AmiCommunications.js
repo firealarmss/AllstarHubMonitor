@@ -10,6 +10,7 @@ class AmiCommunications {
         this.io = io;
         this.amiClient = new AmiClient();
         this.nodes = [];
+        this.lastKeyUpEvents = [];
         this.connected = false;
     }
 
@@ -55,6 +56,25 @@ class AmiCommunications {
             //console.log(data);
             await this.handleAList(data.EventValue)
         }
+    }
+
+    storeKeyUpEvent(data) {
+        if (data.via.toString() === data.node) {
+            //console.debug('Ignoring self-loop event:', data);
+            return;
+        }
+
+        if (data.state === 'Keyed') {
+            this.lastKeyUpEvents.push(data);
+            if (this.lastKeyUpEvents.length > 15) {
+                this.lastKeyUpEvents.shift();
+            }
+        }
+    }
+
+    emitLastKeyUpEvents(socket) {
+        //console.log('Emitting last key up events:', this.lastKeyUpEvents);
+        socket.emit('initial_key_up_events', this.lastKeyUpEvents);
     }
 
     async processShowVarsResponse(response) {
@@ -109,6 +129,7 @@ class AmiCommunications {
                     let nodeInfo = nodeData.find(n => n.nodeId === nodeId) || {};
                     //console.log("nodes list" + this.configNodes);
                     this.io.emit('node_key', { node: nodeId, via: this.node.nodeNumber, callsign: nodeInfo.callSign || 'N/A', frequency: nodeInfo.frequency || 'N/A', location: nodeInfo.location || 'N/A', direction: null, state: newState, config: this.configNodes});
+                    this.storeKeyUpEvent({ node: nodeId, via: this.node.nodeNumber, callsign: nodeInfo.callSign || 'N/A', frequency: nodeInfo.frequency || 'N/A', location: nodeInfo.location || 'N/A', direction: null, state: newState, config: this.configNodes})
 
                     return {
                         node: nodeId,
