@@ -30,8 +30,15 @@
         h1.mb-4 {
             margin-bottom: 1rem;
         }
+        .github-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            font-size: 24px;
+        }
     </style>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
 </head>
 <body>
 
@@ -75,6 +82,10 @@
         <tbody id="events"></tbody>
     </table>
 </div>
+
+<a href="https://github.com/firealarmss/AllstarHubMonitor" target="_blank" class="btn btn-dark github-button">
+    <i class="fab fa-github"></i> GitHub
+</a>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
