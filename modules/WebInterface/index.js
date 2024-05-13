@@ -23,7 +23,7 @@ function createApp(config, logger, dbManager) {
     const amiCommsInstances = [];
 
     config.nodes.forEach(nodeConfig => {
-        const amiComms = new AmiCommunications(logger, nodeConfig, config.nodes, io);
+        const amiComms = new AmiCommunications(logger, nodeConfig, config.nodes, config, io);
         amiComms.nodeConfig = nodeConfig;
         amiCommsInstances.push(amiComms);
         amiComms.initialize().catch(err => {
@@ -98,7 +98,7 @@ function sendConnectionCommand(logger, io, config, node_info, command, username)
         return;
     }
 
-    const amiComms = new AmiCommunications(logger, matchingNode, this.config.nodes, io);
+    const amiComms = new AmiCommunications(logger, matchingNode, this.config.nodes, config, io);
     amiComms.initialize().then(r => {});
     setTimeout(() => {
         amiComms.sendAsteriskCLICommand(`rpt fun ${node_info.sourceNode} ${command}${node_info.targetNode}`).then(r => {});

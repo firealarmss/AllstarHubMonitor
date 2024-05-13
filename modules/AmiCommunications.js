@@ -2,12 +2,13 @@ const AmiClient = require('asterisk-ami-client');
 const parseAslDb = require('./AslDbHandler');
 
 class AmiCommunications {
-    constructor(logger, node, nodes, io) {
+    constructor(logger, node, nodes, config, io) {
         this.logger = logger;
         this.configNodes = nodes;
         this.node = node;
-
+        this.config = config;
         this.io = io;
+
         this.amiClient = new AmiClient();
         this.nodes = [];
         this.lastKeyUpEvents = [];
@@ -85,7 +86,7 @@ class AmiCommunications {
             const alinksParts = alinksDetails.split(',').slice(1);
 
             try {
-                const nodeData = await parseAslDb(this.configNodes.asl.dbPath);
+                const nodeData = await parseAslDb(this.config.db.asl.dbPath);
                 const connectedNodes = await Promise.all(alinksParts.map(async part => {
                     const [nodeId, directionState] = part.split('T');
                     const state = directionState.endsWith('U') ? 'Unkeyed' : 'Keyed';
@@ -119,7 +120,7 @@ class AmiCommunications {
             const nodeDetails = parts.slice(1);
 
             try {
-                const nodeData = await parseAslDb(this.configNodes.asl.dbPath);
+                const nodeData = await parseAslDb(this.config.db.asl.dbPath);
 
                 let connectedNodesPromises = nodeDetails.map(async detail => {
                     let nodeId = detail.slice(0, -2); // Extract node number
