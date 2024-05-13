@@ -14,6 +14,7 @@ db:
     refreshInterval: 600000 # ms or 0 to disable
     url: "https://allmondb.allstarlink.org/"
     dbPath: "./db/aslDb.txt"
+    privateDbPath: "./db/privateDb.txt"
 
 nodes:
   - name: "Node 1"

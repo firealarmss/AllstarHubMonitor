@@ -148,16 +148,17 @@
                 if (!row) {
                     row = tableBody.insertRow();
                     row.id = rowId;
+                    const stateClass = node.state === 'Keyed' ? 'badge-success' : 'badge-secondary';
                     row.innerHTML = `
-                    <td>${node.callsign || 'N/A'}</td>
-                    <td>${node.node}</td>
-                    <td>${node.location || 'N/A'}</td>
-                    <td>${node.frequency || 'N/A'}</td>
-                    <td><span class="badge badge-secondary" id="state-${node.node}">${node.state}</span></td>
-                    <% if (isAuthenticated) {%>
-                        <td><button class="btn btn-warning btn-sm" onclick="disconnectNode('${node.node}', '${node.via}')">Disconnect</button></td>
-                    <% } %>
-                `;
+                        <td>${node.callsign || 'N/A'}</td>
+                        <td>${node.node}</td>
+                        <td>${node.location || 'N/A'}</td>
+                        <td>${node.frequency || 'N/A'}</td>
+                        <td><span class="badge ${stateClass}" id="state-${node.node}">${node.state}</span></td>
+                        <% if (isAuthenticated) {%>
+                            <td><button class="btn btn-warning btn-sm" onclick="disconnectNode('${node.node}', '${node.via}')">Disconnect</button></td>
+                        <% } %>
+                    `;
                 } else {
                     const stateSpan = document.getElementById(`state-${node.node}`);
                     if (stateSpan && stateSpan.textContent !== node.state) {
@@ -166,6 +167,7 @@
                     }
                 }
             });
+
         });
 
         window.disconnectNode = function (nodeId, via) {
