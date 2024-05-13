@@ -1,5 +1,5 @@
 const AmiClient = require('asterisk-ami-client');
-const parseAslDb = require('./AslDbHandler');
+const aslDbHandler = require('./AslDbHandler');
 
 class AmiCommunications {
     constructor(logger, node, nodes, config, io) {
@@ -82,29 +82,37 @@ class AmiCommunications {
         const lines = response['$content'].split('\n');
         const alinksLine = lines.find(line => line.trim().startsWith('RPT_ALINKS='));
         if (alinksLine) {
-            const [, alinksDetails] = alinksLine.split('=');
-            const alinksParts = alinksDetails.split(',').slice(1);
-
             try {
-                const nodeData = await parseAslDb(this.config.db.asl.dbPath);
-                const connectedNodes = await Promise.all(alinksParts.map(async part => {
+                const [, alinksDetails] = alinksLine.split('=');
+                const alinksParts = alinksDetails.split(',').slice(1);
+
+                const nodeData = await aslDbHandler.parseAslDb(this.config.db.asl.dbPath);
+                const privateNodes = await aslDbHandler.loadPrivateNodes(this.config.db.asl.privateDbPath);
+
+                const connectedNodes = alinksParts.map(part => {
                     const [nodeId, directionState] = part.split('T');
                     const state = directionState.endsWith('U') ? 'Unkeyed' : 'Keyed';
                     const direction = directionState[0];
+                    let nodeInfo = nodeData.find(n => n.nodeId === nodeId);
+                    const isPrivate = privateNodes.has(nodeId);
 
-                    let nodeInfo = nodeData.find(n => n.nodeId === nodeId) || {};
+                    if (isPrivate) {
+                        nodeInfo = privateNodes.get(nodeId);
+                    }
+
                     return {
                         node: nodeId,
                         via: this.node.nodeNumber,
-                        callsign: nodeInfo.callSign || '',
-                        frequency: nodeInfo.frequency || 'N/A',
-                        location: nodeInfo.location || 'Unknown',
+                        callsign: nodeInfo ? nodeInfo.callsign : 'N/A',
+                        frequency: nodeInfo ? nodeInfo.frequency : 'N/A',
+                        location: nodeInfo ? nodeInfo.location : 'Unknown',
                         direction: direction,
-                        state: state
+                        state: state,
+                        isPrivate
                     };
-                }));
-                //console.log('Connected Nodes:', connectedNodes)
+                });
 
+                //console.log('Connected Nodes:', connectedNodes);
                 this.io.emit('connected_nodes', connectedNodes);
             } catch (error) {
                 console.error('Error processing RPT_ALINKS:', error);
@@ -112,39 +120,54 @@ class AmiCommunications {
         }
     }
 
-    async handleAList(eventValue, key_event = true) {
+    async handleAList(eventValue) {
         const parts = eventValue.split(',');
-
         if (parts.length > 1) {
-            const nodeCount = parseInt(parts[0], 10);
-            const nodeDetails = parts.slice(1);
-
             try {
-                const nodeData = await parseAslDb(this.config.db.asl.dbPath);
+                const nodeData = await aslDbHandler.parseAslDb(this.config.db.asl.dbPath);
+                const privateNodes = await aslDbHandler.loadPrivateNodes(this.config.db.asl.privateDbPath);
 
-                let connectedNodesPromises = nodeDetails.map(async detail => {
-                    let nodeId = detail.slice(0, -2); // Extract node number
+                const connectedNodes = parts.slice(1).map(detail => {
+                    const nodeId = detail.slice(0, -2);
                     let stateIndicator = detail.slice(-1); // 'K' for Keyed, 'U' for Unkeyed
                     let newState = stateIndicator === 'U' ? 'Unkeyed' : 'Keyed';
 
-                    let nodeInfo = nodeData.find(n => n.nodeId === nodeId) || {};
-                    //console.log("nodes list" + this.configNodes);
-                    this.io.emit('node_key', { node: nodeId, via: this.node.nodeNumber, callsign: nodeInfo.callSign || 'N/A', frequency: nodeInfo.frequency || 'N/A', location: nodeInfo.location || 'N/A', direction: null, state: newState, config: this.configNodes});
-                    this.storeKeyUpEvent({ node: nodeId, via: this.node.nodeNumber, callsign: nodeInfo.callSign || 'N/A', frequency: nodeInfo.frequency || 'N/A', location: nodeInfo.location || 'N/A', direction: null, state: newState, config: this.configNodes})
+                    const isPrivate = privateNodes.has(nodeId);
+                    let nodeInfo = nodeData.find(n => n.nodeId === nodeId) || {
+                        callsign: 'N/A', frequency: 'N/A', location: 'Unknown'
+                    };
+
+                    if (isPrivate) {
+                        const privateInfo = privateNodes.get(nodeId);
+                        nodeInfo = {...nodeInfo, ...privateInfo};
+                    }
+
+                    this.storeKeyUpEvent({
+                        node: nodeId, via: this.node.nodeNumber, callsign: nodeInfo.callsign, frequency: nodeInfo.frequency,
+                        location: nodeInfo.location, state: newState, config: this.configNodes
+                    });
+
+                    this.io.emit('node_key', {
+                        config: this.configNodes,
+                        node: nodeId,
+                        via: this.node.nodeNumber,
+                        direction: null,
+                        state: newState,
+                        isPrivate,
+                        ...nodeInfo
+                    });
 
                     return {
                         node: nodeId,
                         via: this.node.nodeNumber,
-                        callsign: nodeInfo.callSign || '',
-                        frequency: nodeInfo.frequency || 'N/A',
-                        location: nodeInfo.location || 'Unknown',
-                        direction: detail.slice(-2, -1), // 'T'
-                        state: newState
+                        direction: null,
+                        state: newState,
+                        isPrivate,
+                        ...nodeInfo
                     };
                 });
 
-                let connectedNodes = await Promise.all(connectedNodesPromises);
-                //console.log('Connected Nodes:', connectedNodes)
+                //console.log('Connected Nodes:', connectedNodes);
                 this.io.emit('connected_nodes', connectedNodes);
             } catch (error) {
                 console.error('Error processing node list:', error);

@@ -4,6 +4,7 @@ configs/*
 
 db/*
 !db/.gitkeep
+!db/privateDb.example.txt
 
 .idea
 .idea/*

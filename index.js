@@ -36,7 +36,8 @@ let config = {
         asl: {
             url: undefined,
             refreshInterval: undefined,
-            dbPath: undefined
+            dbPath: undefined,
+            privateDbPath: undefined
         }
     }
 };

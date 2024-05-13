@@ -79,6 +79,8 @@ function createApp(config, logger, dbManager) {
                 comm.emitLastKeyUpEvents(socket);
                 comm.sendAsteriskCLICommand(`rpt showvars ${comm.nodeConfig.nodeNumber}`).then(r => {});
             });
+
+            //console.log("All AMI instances are connected. Ready to race boys");
         } else {
             console.log("Not all AMI instances are connected. Retrying in 5 seconds...");
             setTimeout(() => checkAndEmitEvents(socket), 5000);
