@@ -91,7 +91,18 @@
 <script>
     const socket = io();
 
-    const isAuthenticated = "<%= JSON.stringify(isAuthenticated) %>";
+    let isAuthenticated;
+
+    <% if (typeof isAuthenticated !== 'undefined' && isAuthenticated) { %>
+        const authJson = '<%- JSON.stringify(isAuthenticated).replace(/\\/g, "\\\\").replace(/"/g, '\\"') %>';
+        isAuthenticated = JSON.parse(authJson);
+
+        console.log('Is authenticated:', isAuthenticated);
+        console.log('User:', isAuthenticated.username || 'N/A');
+    <% } else { %>
+        isAuthenticated = null;
+        console.log('Is authenticated:', isAuthenticated);
+    <% } %>
 
     const connectionStatusDiv = document.getElementById('connectionStatus');
     const mainContainer = document.querySelector('.container.mt-4');
