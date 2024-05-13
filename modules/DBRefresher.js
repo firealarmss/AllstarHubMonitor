@@ -37,7 +37,6 @@ class DBRefresher {
     }
 
     saveData(data) {
-        console.log('Refreshing data...');
         fs.writeFile(this.dbPath, data, (err) => {
             if (err) {
                 console.error('Error saving file:', err);
