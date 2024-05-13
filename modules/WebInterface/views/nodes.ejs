@@ -130,7 +130,7 @@
 
 
         socket.on('connected_nodes', function (nodes) {
-            nodes.forEach(node => {
+            nodes.forEach((node, index) => {
                 const tableBody = document.querySelector(`#node${node.via}-body`);
                 if (!tableBody) {
                     console.error(`Table body not found for node via ${node.via}`);
@@ -166,6 +166,9 @@
                         stateSpan.className = `badge ${node.state === 'Keyed' ? 'badge-success' : 'badge-secondary'}`;
                     }
                 }
+
+                const isLastNode = index === nodes.length - 1;
+                console.log(`Processing node ${node.node} with state ${node.state}`, isLastNode ? "Last node in the list" : "");
             });
 
         });
