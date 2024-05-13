@@ -10,11 +10,10 @@
 const yargs = require('yargs');
 const fs = require('fs');
 const yaml = require('js-yaml');
-const Logger = require('./modules/Logger');
-//const DbManager = require("./modules/DbManager");
-const AmiCommunications = require("./modules/AmiCommunications")
+
 const WebInterface = require('./modules/WebInterface');
 const DbManager = require("./modules/DbManager");
+const DBRefresher = require('./modules/DBRefresher');
 
 const argv = yargs
 
@@ -28,7 +27,18 @@ const argv = yargs
     .argv;
 
 let config = {
-    nodes: undefined
+    nodes: undefined,
+    webServer: {
+        port: 3000
+    },
+    db: {
+        userDbPath: undefined,
+        asl: {
+            url: undefined,
+            refreshInterval: undefined,
+            dbPath: undefined
+        }
+    }
 };
 
 if (argv.config) {
@@ -44,23 +54,19 @@ if (argv.config) {
 
     console.log(`AllstarLink Hub Monitor\nCopyright 2024 Caleb, KO4UYJ\n\nDebug: ${config.Debug}\nLog Path: ${LogPath}\n`);
 
-    let dbManager = new DbManager("./db/users.db", null);
+    let dbManager = new DbManager(config.db.userDbPath, null);
     dbManager.initialize();
+
+    if (config.db && config.db.asl && config.db.asl.refreshInterval > 0 && config.db.asl.url && config.db.asl.dbPath) {
+        const dbRefresher = new DBRefresher(config.db.asl.url, config.db.asl.dbPath ,config.db.asl.refreshInterval);
+        dbRefresher.start();
+    } else {
+        console.warn('ASL DB Refresher not configured or is disabled.');
+    }
 
     const { app, server, io } = WebInterface(config, null, dbManager);
 
-    config.nodes.forEach((node) => {
-        let logger = new Logger();
-        let amiComms = new AmiCommunications(logger, node, config.nodes, io);
-        amiComms.initialize().catch(error => {
-            console.error('Error initializing AMI Communications:', error);
-        });
-    });
-
     server.listen(config.webServer.port, () => console.log(`Server running on port ${config.webServer.port}`));
-
-      let logger = new Logger(config.Debug, server.name, config.LogPath, 0);
-
 } else {
     console.error('No config file specified');
     process.exit(1);

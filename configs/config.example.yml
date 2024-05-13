@@ -1,8 +1,19 @@
 systemName: "My System"
 
+webhook:
+  enabled: true
+  url: "https://discord.com/api/webhooks/1237215088616673373/Q_6dCXqt_K0Y_ctQpBHXH9FDh0LQXCIGfihqGgfIcEPbvBM_cBrLE6l4SMjpKPprKyOS"
+
 webServer:
   port: 3000
   address: 0.0.0.0
+
+db:
+  userDbPath: "./db/users.db"
+  asl:
+    refreshInterval: 600000 # ms or 0 to disable
+    url: "https://allmondb.allstarlink.org/"
+    dbPath: "./db/aslDb.txt"
 
 nodes:
   - name: "Node 1"
