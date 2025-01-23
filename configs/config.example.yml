@@ -2,7 +2,7 @@ systemName: "My System"
 
 webhook:
   enabled: true
-  url: "https://discord.com/api/webhooks/1237215088616673373/Q_6dCXqt_K0Y_ctQpBHXH9FDh0LQXCIGfihqGgfIcEPbvBM_cBrLE6l4SMjpKPprKyOS"
+  url: ""
 
 webServer:
   port: 3000
